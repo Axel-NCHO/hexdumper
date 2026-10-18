@@ -2,7 +2,9 @@
 
 Benchmarked on Fedora Linux using a 20 MiB file (`data/random.bin`), with output redirected to `/dev/null`. The file was generated using the following command: 
 
-```shell dd if=/dev/urandom of=random.bin bs=1M count=20 status=progress```  
+```shell
+dd if=/dev/urandom of=random.bin bs=1M count=20 status=progress
+```  
 
 Results are from 10 runs after 2 warmup runs, measured with [`hyperfine`](https://github.com/sharkdp/hyperfine).
 
