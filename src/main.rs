@@ -1,3 +1,7 @@
+// hexdumper: An hex dump tool
+//
+// This tool is written for learning purposes
+
 use clap::Parser;
 use std::{
     fmt::Write as FmtWrite,
@@ -12,12 +16,15 @@ const READ_BUFFER_SIZE: usize = 64 * 1024;
 #[derive(Parser)]
 #[command(name = "hexdumper")]
 struct Cli {
+    /// skip OFFSET bytes
     #[arg(short = 's', long, default_value_t = 0)]
     offset: u64,
 
+    /// read LEN bytes
     #[arg(short = 'n', long, default_value_t = usize::MAX)]
     len: usize,
 
+    /// canonical hex+ASCII display
     #[arg(
         short = 'C',
         long,
@@ -25,6 +32,7 @@ struct Cli {
     )]
     canonical: bool,
 
+    /// two-byte hexadecimal display
     #[arg(
         short = 'x',
         long,
@@ -32,6 +40,7 @@ struct Cli {
     )]
     two_bytes_hexadecimal: bool,
 
+    /// two-byte decimal display
     #[arg(
         short = 'd',
         long,
@@ -39,6 +48,7 @@ struct Cli {
     )]
     two_bytes_decimal: bool,
 
+    /// two-byte octal display
     #[arg(
         short = 'o',
         long,
@@ -46,6 +56,7 @@ struct Cli {
     )]
     two_bytes_octal: bool,
 
+    /// FILE to process
     file: PathBuf,
 }
 
@@ -132,6 +143,7 @@ fn read_line<R: Read>(reader: &mut R, buf: &mut [u8]) -> io::Result<usize> {
     Ok(filled)
 }
 
+/// hexdumper -C
 fn dump_canonical<R: Read, W: Write>(
     reader: &mut R,
     output: &mut W,
@@ -182,6 +194,7 @@ fn dump_canonical<R: Read, W: Write>(
     Ok(())
 }
 
+/// hexdumper (-x | -d | -o)
 fn dump_two_bytes<R: Read, W: Write>(
     reader: &mut R,
     output: &mut W,

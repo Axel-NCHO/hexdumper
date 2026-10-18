@@ -1,59 +1,72 @@
-## Hex dump / Binary file inspector
+## Hexdumper: a binary file inspector
 
-**Goal:** Read raw bytes and display them.
+> This tool was written for learning purposes
 
-**Scope:** Single-file CLI tool. Read-only.
+### Goal
 
-**Features (must):**
+Read raw bytes and display them
 
-- `hexdump [options] FILE`
+### Scope
+
+Single-file CLI tool. Read-only.
+
+### Features
+
+- `hexdumper [options] FILE`
 - Canonical hex+ASCII output (like `hexdump -C`): offset | 16 bytes hex | ASCII.
 - Flags: `-n LEN` (byte count), `-s OFFSET` (skip), `-o/-d/-x` (octal/dec/hex 16-bit words).
 
-- Read from stdin if `-` or no file.
-
-**Stack:** 
-
-- Rust with `std::fs::File` + `Read`
-
-**Deliverable:** Single static binary + README with examples.
-
-**Done criteria:** 
-
-- Can hexdump a 1 GB file with constant memory
-- Correct output on at least 5 known files verified against `xxd`
-
-**Stretch:** `--diff` mode comparing two files byte-by-byte.
-
-
+See 
+```shell 
+cargo run -- --help
+```
 
 ### How does it work?
 
 ```mermaid
+
 stateDiagram-v2
-    [*] --> set_params
-    set_params --> open_file
-    open_file --> skip_bytes
-    skip_bytes --> [*] : EOF
-    skip_bytes --> print_index
-    print_index --> read_2_bytes
-    read_2_bytes --> print_2_bytes_in_base
-    print_2_bytes_in_base --> append_2_bytes_in_ascii
-    append_2_bytes_in_ascii --> print_ascii : read = 16
-    append_2_bytes_in_ascii --> print_ascii : reached LEN
-    append_2_bytes_in_ascii --> read_2_bytes : read < LEN & read < 16
-    print_ascii --> print_index : read < LEN
-    print_ascii --> [*] : read = LEN
-    
-state "Set params
-       OFFSET = -s or 0
-       LEN = -n or -1
-       BASE = -o/-d/-x or 16 " as set_params
-state "Open FILE" as open_file
-state "Skip OFFSET bytes" as skip_bytes
-state "Print index" as print_index
-state "Read 2 bytes" as read_2_bytes
-state "Print 2 bytes in BASE" as print_2_bytes_in_base
-state "Append 2 bytes in ASCII" as append_2_bytes_in_ascii
-state "Print |ASCII| as reset ASCII" as print_ascii
+  [*] --> set_params
+  set_params --> open_file
+  open_file --> seek_offset
+  seek_offset --> [*] : Seek fails / beyond EOF
+  seek_offset --> init_buffers : Success
+
+  init_buffers --> select_mode
+  select_mode --> canonical : -C
+  select_mode --> two_bytes : Default / -x / -d / -o
+
+  state "Canonical mode" as canonical {
+      [*] --> read_chunk_c
+      read_chunk_c --> format_bytes : Bytes read > 0
+      read_chunk_c --> [*] : EOF / LEN reached
+      format_bytes --> format_ascii
+      format_ascii --> write_line_c
+      write_line_c --> read_chunk_c : Continue
+  }
+
+  state "Two-byte mode" as two_bytes {
+      [*] --> read_chunk_2
+      read_chunk_2 --> format_words : Bytes read > 0
+      read_chunk_2 --> [*] : EOF / LEN reached
+      format_words --> write_line_2
+      write_line_2 --> read_chunk_2 : Continue
+  }
+
+  canonical --> flush_output : Done
+  two_bytes --> flush_output : Done
+  flush_output --> [*]
+
+  state "Parse OFFSET, LEN, BASE and mode" as set_params
+  state "Open input file" as open_file
+  state "Seek to OFFSET" as seek_offset
+  state "Initialize fixed-size input and output buffers" as init_buffers
+  state "Read up to 16 bytes, bounded by remaining LEN" as read_chunk_c
+  state "Format bytes in BASE" as format_bytes
+  state "Build ASCII representation" as format_ascii
+  state "Append complete line to output buffer" as write_line_c
+  state "Read up to 16 bytes, bounded by remaining LEN" as read_chunk_2
+  state "Format little-endian 16-bit words in BASE" as format_words
+  state "Append complete line to output buffer" as write_line_2
+  state "Flush buffered output" as flush_output
 ```
